@@ -2,11 +2,11 @@ const { MongoClient } = require('mongodb');
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
-const mongoUrl = 'mongodb://root:password@localhost:27017';
-const ferretUrl = 'mongodb://user:pass@localhost:27011';
+const mongoUrl = process.env.MONGODB_URI||'mongodb://user:pass@localhost:27017';
+const ferretUrl = process.env.FERRET_URI||'mongodb://user:pass@localhost:27011';
 const pgConfig = {
     user: 'user',
-    host: 'localhost',
+    host: process.env.POSTGRE_HOST||'localhost',
     database: 'postgres',
     password: 'pass',
     port: 5432,
@@ -20,9 +20,9 @@ const settings = {
     testFerretDB: true,
     testPostgreSQL: true,
     testPostgreSQLNested: false,
-    benchmarkResults: {}
+    benchmarkResults: {},
+    timeUnit: 'dynamic'
 };
-
 const keywords = [
     'important', 'critical', 'database', 'performance', 'benchmark', 'analysis',
     'optimization', 'scaling', 'latency', 'throughput', 'evaluation', 'comparison',
@@ -49,17 +49,25 @@ function timeOperation(database, operation, indexSetting, callback) {
     return callback().then(result => {
         console.timeEnd(label);
         const endTime = process.hrtime(startTime);
-        const timeInMs = (endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2);
+        
+        let time,timeMs=endTime[0] * 1000 + endTime[1] / 1000000;
+        if (settings.timeUnit === 'dynamic') {
+            if(timeMs>1000){time = (timeMs/1000).toFixed(2)+"s"; }else{time = timeMs.toFixed(2)+"m";}
+        }
+        if (settings.timeUnit === 'milliseconds') {
+            time = timeMs.toFixed(2)+"m";  // Time in milliseconds
+        } else if (settings.timeUnit === 'seconds') {
+            time = (timeMs/1000).toFixed(2)+"s";  // Time in seconds
+        }
         
         if (!settings.benchmarkResults[database]) {
             settings.benchmarkResults[database] = {};
         }
-        settings.benchmarkResults[database][key] = timeInMs;
+        settings.benchmarkResults[database][key] = time;
         
         return result;
     });
 }
-
 function generateBenchmarkReport() {
     console.log('\n\n=========== BENCHMARK SUMMARY ===========');
     
@@ -73,7 +81,7 @@ function generateBenchmarkReport() {
     
     const databases = Object.keys(settings.benchmarkResults);
     
-    console.log('Times in milliseconds (lower is better)\n');
+    console.log('Times in '+settings.timeUnit.replace("dynamic","Seconds or Milliseconds")+' (lower is better)\n');
     
     let header = 'Operation'.padEnd(20);
     databases.forEach(db => {
@@ -154,7 +162,6 @@ Database Benchmark Tool - Usage Options:
   --no-mongo        Skip MongoDB benchmarks
   --no-ferret       Skip FerretDB benchmarks
   --no-pg           Skip PostgreSQL relational benchmarks
-  --no-pg-json      Skip PostgreSQL JSONB benchmarks
   --only-mongo      Run only MongoDB benchmarks
   --only-ferret     Run only FerretDB benchmarks
   --only-pg         Run only PostgreSQL relational benchmarks

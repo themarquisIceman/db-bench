@@ -1,0 +1,18 @@
+{
+  "name": "db-benchmark",
+  "version": "1.0.0",
+  "description": "Benchmarking for freetdb-postgreesql-mongodb",
+  "main": "index.js",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "mongodb": "^6.16.0",
+    "pg": "^8.15.5",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT"
+}

@@ -3,8 +3,8 @@ const { MongoClient } = require('mongodb');
 const ProgressBar = require('progress');
 
 // Configuration (you can use .env file for these values)
-const SOURCE_URI = process.env.SOURCE_MONGODB_URI || 'mongodb://user:pass@localhost:27017';
-const TARGET_URI = process.env.SOURCE_TARGET_URI||'mongodb://user:pass@localhost:27011';// FerretDB typically uses MongoDB protocol
+const SOURCE_URI = process.env.MONGODB_URI || 'mongodb://user:pass@localhost:27017';
+const TARGET_URI = process.env.FERRET_URI||'mongodb://user:pass@localhost:27011';// FerretDB typically uses MongoDB protocol
 const SOURCE_DB = process.env.SOURCE_DB_NAME || 'database';
 const TARGET_DB = process.env.TARGET_DB_NAME || 'database';
 const COLLECTIONS = []; // Collections to migrate, empty means all

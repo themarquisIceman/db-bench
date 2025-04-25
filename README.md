@@ -43,25 +43,37 @@ The tool measures the time taken for the following operations:
 15. **Delete**: Deleting documents/records from the database.
 16. **Create Indexes**: Time taken to create indexes for the database.
 
+
 ## Benchmark Results
+Times are in Seconds (s) or Milliseconds (ms) - lower is better, where lower values indicate better performance. The following benchmarks are performed for each database with and without indexes:
 
-The results are presented in milliseconds, where lower values indicate better performance. The following benchmarks are performed for each database with and without indexes:
+| Operation | MongoDB<br/>(no idx) | MongoDB<br/>(with idx) | FerretDB<br/>(no idx) | FerretDB<br/>(with idx) | PostgreSQL<br/>(no idx) | PostgreSQL<br/>(with idx) |
+|-----------|----------------------|------------------------|------------------------|--------------------------|--------------------------|----------------------------|
+| Insert | 6.81s | 8.84s | 5.04s | 49.33s | 8.62s | 11.23s |
+| Count - All | 253.40ms | 259.57ms | 353.49ms | 351.36ms | 82.67ms | 132.08ms |
+| Count - Filtered | 434.45ms | 62.77ms | 541.14ms | 415.18ms | 62.26ms | 55.06ms |
+| Find | 1.88s | 1.48s | 2.44s | 2.66s | 474.05ms | 611.55ms |
+| FindById | 18.37s | 590.43ms | 21.06s | 731.73ms | 4.41s | 248.81ms |
+| FindOneById | 81.08ms | 1.36ms | 62.65ms | 80.08ms | 14.53ms | 0.94ms |
+| Nested Query | 286.70ms | 169.04ms | 255.39ms | 377.65ms | N/A | N/A |
+| Object Text Search | 524.57ms | 306.55ms | 348.67ms | 2.86s | 79.41ms | 90.80ms |
+| Text Search | 256.56ms | 181.06ms | 231.62ms | 1.63s | 144.99ms | 405.63ms |
+| Array Query | 212.89ms | 147.19ms | 218.62ms | 478.95ms | N/A | N/A |
+| Complex Query | 696.47ms | 107.03ms | 761.47ms | 501.03ms | 118.33ms | 30.08ms |
+| Aggregation | 2.61s | 2.51s | 4.30s | 4.39s | 225.17ms | 249.14ms |
+| Update | 2.29s | 1.22s | 2.29s | 26.44s | 294.92ms | 3.52s |
+| Nested Update | 1.84s | 833.76ms | 1.10s | 14.18s | N/A | N/A |
+| Delete | 1.07s | 8.11s | 215.53ms | 416.62ms | 101.13ms | 90.12ms |
+| Create Indexes | N/A | 11.95s | N/A | 15.46ms | N/A | 2.94ms |
 
-| Operation           | MongoDB (no idx) | MongoDB (with idx) | FerretDB (no idx) | FerretDB (with idx) | PostgreSQL (no idx) | PostgreSQL (with idx) |
-|---------------------|------------------|--------------------|-------------------|---------------------|---------------------|-----------------------|
-| **Insert**          | 15762.53         | 11824.42           | 20759.35          | 63967.62            | 6441.16             | 11922.42              |
-| **Count - All**     | 429.88           | 321.89             | 1019.79           | 246.76              | 988.20              | 133.46                |
-| **Count - Filtered**| 398.32           | 202.50             | 704.83            | 503.86              | 73.84               | 52.21                 |
-| **Find**            | 2109.01          | 2213.86            | 2975.78           | 2822.10             | 554.98              | 554.88                |
-| **FindById**        | 18756.85         | 618.40             | 20900.38          | 940.33              | 10321.34            | 298.58                |
-| **FindOneById**     | 70.03            | 1.46               | 94.20             | 1.68                | 23.93               | 1.27                  |
-| **Nested Query**    | 342.88           | 195.47             | 426.87            | 288.61              | N/A                 | N/A                   |
-| **Object Text Search** | 845.61        | 417.19             | 634.49            | 2402.55             | 114.04              | 81.24                 |
-| **Text Search**     | 188.84           | 199.64             | 446.50            | 2476.87             | 127.82              | 97.85                 |
-| **Array Query**     | 285.01           | 168.00             | 339.96            | 562.36              | N/A                 | N/A                   |
-| **Complex Query**   | 2188.53          | 115.34             | 1476.90           | 750.94              | 120.61              | 30.04                 |
-| **Aggregation**     | 3289.74          | 2631.57            | 4514.41           | 4906.73             | 339.02              | 261.91                |
-| **Update**          | 10063.92         | 2055.17            | 4209.16           | 29905.59            | 580.35              | 3717.94               |
-| **Nested Update**   | 4552.26          | 970.32             | 2270.18           | 18554.39            | N/A                 | N/A                   |
-| **Delete**          | 3239.96          | 8590.98            | 451.66            | 346.26              | 152.40              | 126.22                |
-| **Create Indexes**  | N/A              | 928.52             | N/A               | 148.65              | N/A                 | 3.50                  |
+## Observations
+- **MongoDB** generally performs well for document-based operations, particularly with indexes applied
+- **FerretDB** shows competitive performance for basic operations but has significant slowdowns with indexed updates
+- **PostgreSQL** excels in count operations and aggregations, even without indexes
+- Nested and array operations are not applicable to PostgreSQL as these are document database features
+
+## Environment
+ This benchmark was conducted on my personal PC with all databases running in Docker containers. Resource usage was monitored and was relatively consistent across all tested databases(I saw it with my eyes its not accurate).
+
+## License
+MIT

@@ -1,3 +1,4 @@
+require('dotenv').config(); // For environment variables
 const { 
     mongoUrl, 
     ferretUrl, 
