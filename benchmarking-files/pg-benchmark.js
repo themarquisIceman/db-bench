@@ -54,6 +54,7 @@ async function benchmarkPostgreSQL(pgConfig) {
         });
         
         try {
+            // Create table with enhanced structure to match MongoDB's capabilities
             await benchmarkPool.query(`
                 CREATE TABLE ${tableName} (
                     id INTEGER,
@@ -63,7 +64,10 @@ async function benchmarkPostgreSQL(pgConfig) {
                     description_obj JSONB,
                     timestamp TIMESTAMP,
                     updated BOOLEAN,
-                    update_count INTEGER
+                    update_count INTEGER,
+                    nested JSONB,
+                    tags TEXT[],
+                    "references" JSONB
                 )
             `);
             
@@ -72,6 +76,8 @@ async function benchmarkPostgreSQL(pgConfig) {
                     await benchmarkPool.query(`CREATE INDEX idx_id ON ${tableName}(id)`);
                     await benchmarkPool.query(`CREATE INDEX idx_description_gin ON ${tableName} USING gin(to_tsvector('english', description))`);
                     await benchmarkPool.query(`CREATE INDEX idx_description_obj ON ${tableName} USING gin(description_obj)`);
+                    await benchmarkPool.query(`CREATE INDEX idx_nested ON ${tableName} USING gin(nested)`);
+                    await benchmarkPool.query(`CREATE INDEX idx_tags ON ${tableName} USING gin(tags)`);
                     return true;
                 });
                 benchmarkResults.operations['createIndexes'] = indexResult;
@@ -82,17 +88,31 @@ async function benchmarkPostgreSQL(pgConfig) {
             
             const insertResult = await timeOperation(dbType, 'Insert', settings.withIndex, async () => {
                 for (let index = 0; index < settings.iterations; index++) {
-                    for (let i = 0; i < settings.docsToInsert; i += 1000) {
-                        const batchSize = Math.min(1000, settings.docsToInsert - i);
+                    for (let i = 0; i < settings.docsToInsert; i += 100) {
+                        const batchSize = Math.min(100, settings.docsToInsert - i);
                         const valueStrings = [];
                         
                         for (let j = 0; j < batchSize; j++) {
                             const description = generateDescription(i + j);
-                            valueStrings.push(`(${i + j}, ${index}, 'Test data ${i + j}', '${description}', '{"text": "Hello World!"}'::jsonb, NOW())`);
+                            const nestedObj = JSON.stringify({
+                                value: (i + j) * 2,
+                                label: `Nested value for ${i + j}`,
+                                metrics: {
+                                    count: i + j,
+                                    average: (i + j) / 2,
+                                    factors: [1, 2, 3, 5, 7]
+                                }
+                            });
+                            const referencesObj = JSON.stringify([
+                                { id: i + j + 1, type: 'next' },
+                                { id: i + j - 1, type: 'previous' }
+                            ]);
+                            
+                            valueStrings.push(`(${i + j}, ${index}, 'Test data ${i + j}', '${description}', '{"text": "Hello World!"}'::jsonb, NOW(), NULL, NULL, '${nestedObj}'::jsonb, ARRAY['test', 'benchmark'], '${referencesObj}'::jsonb)`);
                         }
                         
                         const query = `
-                            INSERT INTO ${tableName} (id, batch, data, description, description_obj, timestamp)
+                            INSERT INTO ${tableName} (id, batch, data, description, description_obj, timestamp, updated, update_count, nested, tags, "references")
                             VALUES ${valueStrings.join(', ')}
                         `;
                         
@@ -116,6 +136,7 @@ async function benchmarkPostgreSQL(pgConfig) {
                 }
                 return { totalCount, expectedTotal };
             });
+            benchmarkResults.operations['countAll'] = countAllResult;
             
             const countFilteredResult = await timeOperation(dbType, 'Count - Filtered', settings.withIndex, async () => {
                 let filteredCount;
@@ -161,6 +182,19 @@ async function benchmarkPostgreSQL(pgConfig) {
                 return true;
             });
             benchmarkResults.operations['findOneById'] = findOneByIdResult;
+            
+            // Add nested query test (similar to MongoDB's nested query)
+            const nestedQueryResult = await timeOperation(dbType, 'Nested Query', settings.withIndex, async () => {
+                for (let i = 0; i < findIterations; i++) {
+                    await benchmarkPool.query(`
+                        SELECT * FROM ${tableName}
+                        WHERE (nested->>'value')::int > 10000
+                        LIMIT 1000
+                    `);
+                }
+                return true;
+            });
+            benchmarkResults.operations['nestedQuery'] = nestedQueryResult;
             
             // Add object search with "o" letter time check
             const objectSearchIterations = settings.iterations;
@@ -212,6 +246,19 @@ async function benchmarkPostgreSQL(pgConfig) {
             });
             benchmarkResults.operations['textSearch'] = textSearchResult;
             
+            // Add array query test (similar to MongoDB's array query)
+            const arrayQueryResult = await timeOperation(dbType, 'Array Query', settings.withIndex, async () => {
+                for (let i = 0; i < findIterations; i++) {
+                    await benchmarkPool.query(`
+                        SELECT * FROM ${tableName}
+                        WHERE 'test' = ANY(tags)
+                        LIMIT 1000
+                    `);
+                }
+                return true;
+            });
+            benchmarkResults.operations['arrayQuery'] = arrayQueryResult;
+            
             const complexQueryIterations = 5;
             const complexQueryResult = await timeOperation(dbType, 'Complex Query', settings.withIndex, async () => {
                 for (let i = 0; i < complexQueryIterations; i++) {
@@ -219,6 +266,7 @@ async function benchmarkPostgreSQL(pgConfig) {
                         SELECT * FROM ${tableName}
                         WHERE id BETWEEN 1000 AND 5000
                         AND batch IN (0, 1)
+                        AND 'test' = ANY(tags)
                         ORDER BY id DESC
                         LIMIT 1000
                     `);
@@ -231,7 +279,11 @@ async function benchmarkPostgreSQL(pgConfig) {
             const aggregationResult = await timeOperation(dbType, 'Aggregation', settings.withIndex, async () => {
                 for (let i = 0; i < aggregationIterations; i++) {
                     await benchmarkPool.query(`
-                        SELECT batch, COUNT(*), AVG(id) as avg_id
+                        SELECT 
+                            batch, 
+                            COUNT(*), 
+                            AVG(id) as avg_id,
+                            AVG((nested->>'value')::float) as avg_nested_value
                         FROM ${tableName}
                         WHERE batch >= 0
                         GROUP BY batch
@@ -254,6 +306,45 @@ async function benchmarkPostgreSQL(pgConfig) {
                 return true;
             });
             benchmarkResults.operations['update'] = updateResult;
+            
+            // Add nested update test (similar to MongoDB's nested update)
+            const nestedUpdateResult = await timeOperation(dbType, 'Nested Update', settings.withIndex, async () => {
+                for (let i = 0; i < Math.min(5, updateIterations); i++) {
+                    await benchmarkPool.query(`
+                        UPDATE ${tableName}
+                        SET nested = jsonb_set(nested, '{metrics, updated_count}', to_jsonb($1::int))
+                        WHERE id < 1000
+                    `, [i]);
+                }
+                return true;
+            });
+            benchmarkResults.operations['nestedUpdate'] = nestedUpdateResult;
+            
+            // Add JSON path operations that PostgreSQL is good at
+            const jsonPathResult = await timeOperation(dbType, 'JSON Path Query', settings.withIndex, async () => {
+                for (let i = 0; i < Math.min(5, findIterations); i++) {
+                    await benchmarkPool.query(`
+                        SELECT * FROM ${tableName}
+                        WHERE nested @? '$.metrics.count ? (@ > 5000)'
+                        LIMIT 1000
+                    `);
+                }
+                return true;
+            });
+            benchmarkResults.operations['jsonPathQuery'] = jsonPathResult;
+            
+            // Add JSON containment operation
+            const jsonContainmentResult = await timeOperation(dbType, 'JSON Containment', settings.withIndex, async () => {
+                for (let i = 0; i < Math.min(5, findIterations); i++) {
+                    await benchmarkPool.query(`
+                        SELECT * FROM ${tableName}
+                        WHERE nested->'metrics'->'factors' @> '[3]'
+                        LIMIT 1000
+                    `);
+                }
+                return true;
+            });
+            benchmarkResults.operations['jsonContainment'] = jsonContainmentResult;
             
             const deleteIterations = 2;
             const deleteResult = await timeOperation(dbType, 'Delete', settings.withIndex, async () => {
@@ -291,8 +382,6 @@ async function benchmarkPostgreSQL(pgConfig) {
         } finally {
             dropClient.release();
         }
-        
-        // Output the results as JSON
         
         return benchmarkResults;
         

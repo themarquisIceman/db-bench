@@ -38,7 +38,6 @@ function generateDescription(i) {
     }
     return `This is a ${descKeywords.join(' and ')} test document with ID ${i}`;
 }
-
 function timeOperation(database, operation, indexSetting, callback) {
     const label = operation;
     const key = `${database}|${operation}|${indexSetting ? 'index' : 'noindex'}`;

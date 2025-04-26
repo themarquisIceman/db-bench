@@ -239,6 +239,29 @@ async function benchmarkMongoDatabase(url, isFerretDB = false) {
         });
         benchmarkResults.operations['nestedUpdate'] = nestedUpdateResult;
         
+        // Add JSONB Path operations (mimic PostgreSQL's capability)
+        const jsonPathResult = await timeOperation(dbType, 'JSON Path Query', settings.withIndex, async () => {
+            for (let i = 0; i < Math.min(5, findIterations); i++) {
+                // MongoDB's equivalent of PostgreSQL's jsonb_path_query
+                await collection.find({
+                    "nested.metrics.count": { $gt: 5000 }
+                }).limit(1000).toArray();
+            }
+            return true;
+        });
+        benchmarkResults.operations['jsonPathQuery'] = jsonPathResult;
+        
+        const jsonContainmentResult = await timeOperation(dbType, 'JSON Containment', settings.withIndex, async () => {
+            for (let i = 0; i < Math.min(5, findIterations); i++) {
+                // MongoDB's equivalent to PostgreSQL's @> operator
+                await collection.find({
+                    "nested.metrics": { $elemMatch: { $eq: 3 } }
+                }).limit(1000).toArray();
+            }
+            return true;
+        });
+        benchmarkResults.operations['jsonContainment'] = jsonContainmentResult;
+        
         const deleteIterations = 2;
         const deleteResult = await timeOperation(dbType, 'Delete', settings.withIndex, async () => {
             let totalDeleted = 0;

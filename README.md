@@ -47,24 +47,27 @@ The tool measures the time taken for the following operations:
 ## Benchmark Results
 Times are in Seconds (s) or Milliseconds (ms) - lower is better, where lower values indicate better performance. The following benchmarks are performed for each database with and without indexes:
 
-| Operation | MongoDB<br/>(no idx) | MongoDB<br/>(with idx) | FerretDB<br/>(no idx) | FerretDB<br/>(with idx) | PostgreSQL<br/>(no idx) | PostgreSQL<br/>(with idx) |
-|-----------|----------------------|------------------------|------------------------|--------------------------|--------------------------|----------------------------|
-| Insert | 6.81s | 8.84s | 5.04s | 49.33s | 8.62s | 11.23s |
-| Count - All | 253.40ms | 259.57ms | 353.49ms | 351.36ms | 82.67ms | 132.08ms |
-| Count - Filtered | 434.45ms | 62.77ms | 541.14ms | 415.18ms | 62.26ms | 55.06ms |
-| Find | 1.88s | 1.48s | 2.44s | 2.66s | 474.05ms | 611.55ms |
-| FindById | 18.37s | 590.43ms | 21.06s | 731.73ms | 4.41s | 248.81ms |
-| FindOneById | 81.08ms | 1.36ms | 62.65ms | 80.08ms | 14.53ms | 0.94ms |
-| Nested Query | 286.70ms | 169.04ms | 255.39ms | 377.65ms | N/A | N/A |
-| Object Text Search | 524.57ms | 306.55ms | 348.67ms | 2.86s | 79.41ms | 90.80ms |
-| Text Search | 256.56ms | 181.06ms | 231.62ms | 1.63s | 144.99ms | 405.63ms |
-| Array Query | 212.89ms | 147.19ms | 218.62ms | 478.95ms | N/A | N/A |
-| Complex Query | 696.47ms | 107.03ms | 761.47ms | 501.03ms | 118.33ms | 30.08ms |
-| Aggregation | 2.61s | 2.51s | 4.30s | 4.39s | 225.17ms | 249.14ms |
-| Update | 2.29s | 1.22s | 2.29s | 26.44s | 294.92ms | 3.52s |
-| Nested Update | 1.84s | 833.76ms | 1.10s | 14.18s | N/A | N/A |
-| Delete | 1.07s | 8.11s | 215.53ms | 416.62ms | 101.13ms | 90.12ms |
-| Create Indexes | N/A | 11.95s | N/A | 15.46ms | N/A | 2.94ms |
+
+| Operation            | MongoDB (no idx) | MongoDB (with idx) | FerretDB (no idx) | FerretDB (with idx) | PostgreSQL (no idx) | PostgreSQL (with idx) |
+|----------------------|------------------|---------------------|-------------------|----------------------|----------------------|------------------------|
+| **Insert**           | 10.53s           | 23.98s              | 12.70s            | 74.18s               | 36.93s               | 47.89s                 |
+| **Count - All**      | 464.46m          | 446.83m             | 613.83m           | 442.34m              | 216.12m              | 241.30m                |
+| **Count - Filtered** | 483.21m          | 130.17m             | 658.98m           | 412.41m              | 279.06m              | 131.56m                |
+| **Find**             | 3.42s            | 3.56s               | 6.63s             | 4.39s                | 1.11s                | 1.05s                  |
+| **FindById**         | 103.55s          | 1.50s               | 54.10s            | 1.43s                | 26.46s               | 1.47s                  |
+| **FindOneById**      | 136.32m          | 26.26m              | 122.94m           | 14.71m               | 47.20m               | 24.90m                 |
+| **Nested Query**     | 532.98m          | 581.45m             | 698.93m           | 692.10m              | 295.15m              | 462.19m                |
+| **Object Text Search**| 977.52m          | 739.19m             | 741.51m           | 2.40s                | 416.27m              | 461.37m                |
+| **Text Search**      | 750.60m          | 562.01m             | 562.56m           | 2.90s                | 325.13m              | 888.11m                |
+| **Array Query**      | 622.25m          | 779.38m             | 529.04m           | 630.89m              | 212.82m              | 326.44m                |
+| **Complex Query**    | 1.35s            | 443.98m             | 1.08s             | 766.75m              | 420.65m              | 164.37m                |
+| **Aggregation**      | 1.96s            | 1.99s               | 13.34s            | 13.77s               | 937.53m              | 1.03s                  |
+| **Update**           | 2.92s            | 1.86s               | 2.77s             | 34.06s               | 955.80m              | 5.74s                  |
+| **Nested Update**    | 1.75s            | 1.09s               | 1.43s             | 18.98s               | 695.25m              | 3.36s                  |
+| **JSON Path Query**  | 351.49m          | 419.67m             | 542.92m           | 529.17m              | 162.89m              | 287.08m                |
+| **JSON Containment** | 690.46m          | 683.62m             | 659.38m           | 1.03s                | 148.97m              | 153.93m                |
+| **Delete**           | 1.78s            | 28.48s              | 718.41m           | 2.55s                | 316.34m              | 1.64s                  |
+| **Create Indexes**   | N/A              | 93.17m              | N/A               | 127.90m              | N/A                  | 75.72m                 |
 
 ## Observations
 - **MongoDB** generally performs well for document-based operations, particularly with indexes applied
